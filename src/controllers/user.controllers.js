@@ -183,19 +183,11 @@ const deleteUser = async (req, res) => {
       throw new ApiError(
         STATUS_CODES.BAD_REQUEST,
         null,
-        "user id or email of the user to delete required"
+        "user id  of the user to delete required"
       );
     }
     const user = req.user;
     const fetchedUser = await User.findById(user._id);
-    const isAdmin = fetchedUser.role === "admin";
-    if (!isAdmin) {
-      throw new ApiError(
-        STATUS_CODES.UNAUTHORIZED,
-        null,
-        "Only admins can delete user"
-      );
-    }
 
     const checkIfUserAvailable = await User.findById(id);
 
@@ -238,14 +230,7 @@ const deleteUser = async (req, res) => {
 const fetchAllUsers = async (req, res) => {
   try {
     const user = req.user;
-    const isAdmin = user.role === "admin";
-    if (!isAdmin) {
-      throw new ApiError(
-        STATUS_CODES.UNAUTHORIZED,
-        null,
-        "only admin can fetch all users"
-      );
-    }
+
     const allUsers = await User.find();
     if (!allUsers) {
       throw new ApiError(STATUS_CODES.NOT_FOUND, null, "users not found");
@@ -275,17 +260,10 @@ const fetchUser = async (req, res) => {
       throw new ApiError(
         STATUS_CODES.BAD_REQUEST,
         null,
-        "user id or email of the user to fetch required"
+        "id of the user is required to fetch"
       );
     }
-    const isAdmin = user.role === "admin";
-    if (!isAdmin) {
-      throw new ApiError(
-        STATUS_CODES.UNAUTHORIZED,
-        null,
-        "only Admin can fetch a user"
-      );
-    }
+    //TODO: User can fetch its details by providing its own id but cannot fetch the user details with others users id but admin can
 
     const fetchedUser = await User.findById(id);
 
@@ -316,8 +294,6 @@ const updateUser = async (req, res) => {
     const allowedFields = ["name", "email", "password", "role"];
     const userData = req.body;
     const sanitizedData = sanitizeInput(userData, allowedFields);
-    console.log(sanitizedData);
-
     const updateData = sanitizedData;
 
     const updatedUser = await User.findByIdAndUpdate(
