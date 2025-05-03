@@ -3,10 +3,10 @@ import { validateJWT } from "../middlewares/auth.middlewares.js";
 import { auhtorizeRole } from "../middlewares/role.middlewares.js";
 import {
   addTask,
-  getTasks,
+  fetchTasks,
   deleteTask,
   updateTask,
-  getAllUsers,
+  fetchAllTasks,
 } from "../controllers/task.controllers.js";
 
 const router = Router();
@@ -17,7 +17,7 @@ router
   .post(validateJWT, auhtorizeRole(["admin", "user"]), addTask);
 router
   .route("/fetch-tasks")
-  .get(validateJWT, auhtorizeRole(["admin", "user"]), getTasks); //fetchs all user-specific tasks
+  .get(validateJWT, auhtorizeRole(["admin", "user"]), fetchTasks); //fetchs all user-specific tasks
 router
   .route("/delete-task/:id")
   .delete(validateJWT, auhtorizeRole(["admin", "user"]), deleteTask);
@@ -27,6 +27,6 @@ router
 
 router
   .route("/fetch-all-tasks")
-  .get(validateJWT, auhtorizeRole(["admin"]), getAllUsers);
+  .get(validateJWT, auhtorizeRole(["admin"]), fetchAllTasks);
 
 export default router;

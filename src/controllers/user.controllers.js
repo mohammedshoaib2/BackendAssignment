@@ -5,6 +5,7 @@ import { User } from "../models/user.models.js";
 import { generateRefreshAndAccessToken } from "../utils/generateTokens.js";
 import { sanitizeInput } from "../utils/sanitizeInput.js";
 import { validateInput } from "../utils/validateInput.js";
+import _ from "lodash";
 
 const registerUser = async (req, res) => {
   try {
@@ -28,7 +29,7 @@ const registerUser = async (req, res) => {
 
     //check if user with email already exists
     const isUserExits = await User.findOne({ email });
-    if (isUserExits) {
+    if (!_.isEmpty(isUserExits)) {
       throw new ApiError(
         STATUS_CODES.BAD_REQUEST,
         null,
@@ -46,7 +47,7 @@ const registerUser = async (req, res) => {
 
     //check if user has been created
     const createdUser = await User.findOne({ email }).select("-password");
-    if (!createdUser) {
+    if (_.isEmpty(createdUser)) {
       throw new ApiError(
         STATUS_CODES.INTERNAL_SERVER_ERROR,
         null,

@@ -53,7 +53,7 @@ const addTask = async (req, res) => {
   }
 };
 
-const getTasks = async (req, res) => {
+const fetchTasks = async (req, res) => {
   try {
     const user = req.user;
 
@@ -65,7 +65,7 @@ const getTasks = async (req, res) => {
         {
           all_tasks: allUserTasks,
         },
-        "all tasks fetched"
+        "all tasks of the user fetched successfully!"
       )
     );
   } catch (error) {
@@ -199,9 +199,19 @@ const updateTask = async (req, res) => {
   }
 };
 
-const getAllUsers = async (req, res) => {
+const fetchAllTasks = async (req, res) => {
   try {
-    res.send("OK");
+    const allTasks = await Task.find().populate("user");
+
+    res.status(STATUS_CODES.OK).json(
+      new ApiResponse(
+        STATUS_CODES.OK,
+        {
+          all_tasks: allTasks,
+        },
+        "all tasks fetched successfully!"
+      )
+    );
   } catch (error) {
     res
       .status(error.statusCode || 500)
@@ -209,4 +219,4 @@ const getAllUsers = async (req, res) => {
   }
 };
 
-export { addTask, getTasks, deleteTask, updateTask, getAllUsers };
+export { addTask, fetchTasks, deleteTask, updateTask, fetchAllTasks };
