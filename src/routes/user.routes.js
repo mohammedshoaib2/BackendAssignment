@@ -17,11 +17,11 @@ const router = Router();
 router.route("/register").post(registerUser);
 router.route("/login").post(loginUser);
 
-//protected routes
+//protected routes - User Routes
 router.route("/logout").post(validateJWT, logoutUser);
-router.route("/delete-user/:id").delete(validateJWT, deleteUser);
-router.route("/fetch-all-users").get(validateJWT, fetchAllUsers);
-router.route("/fetch-user/:id").get(validateJWT, fetchUser);
+router.route("/delete-user/:id").delete(validateJWT, deleteUser); //Admin route
+router.route("/fetch-all-users").get(validateJWT, fetchAllUsers); //Admin route
+router.route("/fetch-user/:id").get(validateJWT, fetchUser); //Admin route
 router.route("/update-user").put(validateJWT, updateUser);
 
 export default router;

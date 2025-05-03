@@ -3,25 +3,28 @@ import { ApiError } from "../utils/ApiError.js";
 import { options, STATUS_CODES } from "../constants.js";
 import { User } from "../models/user.models.js";
 import { generateRefreshAndAccessToken } from "../utils/generateTokens.js";
+import { sanitizeInput } from "../utils/sanitizeInput.js";
+import { validateInput } from "../utils/validateInput.js";
 
 const registerUser = async (req, res) => {
   try {
-    //TODO:Sanitize the data recieved
+    const userData = req.body;
+    const allowedFields = ["name", "email", "password", "role"];
+    //Sanitize the data recieved
+    const sanitizedData = sanitizeInput(userData, allowedFields);
 
-    //TODO:Validate the data recieved
+    //Validate the data recieved
+    const validationResponse = validateInput(sanitizedData, allowedFields);
 
-    const { name, email, password, role } = req.body;
-
-    if (
-      [name, email, password, role].some((field) => {
-        return field?.trim() === "";
-      })
-    )
+    if (!validationResponse.valid) {
       throw new ApiError(
         STATUS_CODES.BAD_REQUEST,
         null,
-        "data recieved is not valid"
+        validationResponse.message
       );
+    }
+
+    const { name, email, password, role } = sanitizedData;
 
     //check if user with email already exists
     const isUserExits = await User.findOne({ email });
@@ -70,11 +73,22 @@ const registerUser = async (req, res) => {
 
 const loginUser = async (req, res) => {
   try {
-    //TODO:sanitize the data recieved
+    const userData = req.body;
+    const allowedFields = ["email", "password"];
+    //sanitize the data recieved
+    const sanitizedData = sanitizeInput(userData, allowedFields);
 
-    //TODO:validate the data recieved
-    const { email, password } = req.body;
+    //validate the data recieved
+    const validationResponse = validateInput(sanitizedData, allowedFields);
 
+    if (!validationResponse.valid) {
+      throw new ApiError(
+        STATUS_CODES.BAD_REQUEST,
+        null,
+        validationResponse.message
+      );
+    }
+    const { email, password } = sanitizedData;
     if (
       [email, password].some((field) => {
         return field?.trim() === "";
@@ -299,7 +313,12 @@ const fetchUser = async (req, res) => {
 const updateUser = async (req, res) => {
   try {
     const user = req.user;
-    const updateData = req.body;
+    const allowedFields = ["name", "email", "password", "role"];
+    const userData = req.body;
+    const sanitizedData = sanitizeInput(userData, allowedFields);
+    console.log(sanitizedData);
+
+    const updateData = sanitizedData;
 
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
@@ -310,6 +329,14 @@ const updateUser = async (req, res) => {
         new: true,
       }
     );
+
+    if (!updateData) {
+      throw new ApiError(
+        STATUS_CODES.INTERNAL_SERVER_ERROR,
+        null,
+        "user not updated, Something went wrong!"
+      );
+    }
 
     res.status(STATUS_CODES.OK).json(
       new ApiResponse(
