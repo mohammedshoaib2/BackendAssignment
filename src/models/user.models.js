@@ -10,6 +10,9 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
+      unique: true,
+      trim: true,
+      lowercase: true,
     },
     password: {
       type: String,
@@ -35,22 +38,6 @@ userSchema.pre("save", async function (next) {
   const hashedPassword = await bcrypt.hash(this.password, 10);
   this.password = hashedPassword;
 });
-
-// userSchema.pre("findOneAndUpdate", async function (next) {
-//   const currentUser = await this.model.findOne(this.getQuery());
-//   const update = this.getUpdate();
-//   const newPassword = update.$set.password;
-//   const isSame = await bcrypt.compare(newPassword, currentUser.password);
-
-//   console.log(isSame);
-
-//   if (isSame) {
-//     return next();
-//   }
-
-//   const hashedPassword = await bcrypt.hash(newPassword, 10);
-//   update.$set.password = hashedPassword;
-// });
 
 userSchema.methods.isPasswordCorrect = async function (password) {
   const verifyPassowrd = await bcrypt.compare(password, this.password);

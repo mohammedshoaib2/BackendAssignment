@@ -4,17 +4,23 @@ import { options, STATUS_CODES } from "../constants.js";
 import { User } from "../models/user.models.js";
 import { generateRefreshAndAccessToken } from "../utils/generateTokens.js";
 import { sanitizeInput } from "../utils/sanitizeInput.js";
-import { validateInput } from "../utils/validateInput.js";
+import {
+  validateEmailPassword,
+  validateInput,
+} from "../utils/validateInput.js";
 import _ from "lodash";
+import bcrypt from "bcrypt";
+import { validateEmail } from "../utils/validateEmail.js";
+import { validatePassword } from "../utils/validatePassword.js";
 
 const registerUser = async (req, res) => {
   try {
     const userData = req.body;
     const allowedFields = ["name", "email", "password", "role"];
-    //Sanitize the data recieved
+    //Sanitize the data recieved : removes if any noSQL injections and unwanted fields from req.body
     const sanitizedData = sanitizeInput(userData, allowedFields);
 
-    //Validate the data recieved
+    //Validate the data recieved : checks if all the fields required are available
     const validationResponse = validateInput(sanitizedData, allowedFields);
 
     if (!validationResponse.valid) {
@@ -26,6 +32,9 @@ const registerUser = async (req, res) => {
     }
 
     const { name, email, password, role } = sanitizedData;
+
+    //validation of email and passowrd format
+    validateEmailPassword(email, password);
 
     //check if user with email already exists
     const isUserExits = await User.findOne({ email });
@@ -55,7 +64,7 @@ const registerUser = async (req, res) => {
       );
     }
 
-    //send the data to the user
+    //send the data to the client
     res.status(STATUS_CODES.CREATED).json(
       new ApiResponse(
         STATUS_CODES.CREATED,
@@ -76,10 +85,10 @@ const loginUser = async (req, res) => {
   try {
     const userData = req.body;
     const allowedFields = ["email", "password"];
-    //sanitize the data recieved
+    //Sanitize the data recieved : removes if any noSQL injections and unwanted fields from req.body
     const sanitizedData = sanitizeInput(userData, allowedFields);
 
-    //validate the data recieved
+    //Validate the data recieved : checks if all the fields required are available
     const validationResponse = validateInput(sanitizedData, allowedFields);
 
     if (!validationResponse.valid) {
@@ -91,8 +100,10 @@ const loginUser = async (req, res) => {
     }
     const { email, password } = sanitizedData;
 
-    //check user exist with the email
+    //validation of email and passowrd format
+    validateEmailPassword(email, password);
 
+    //check user exist with the email
     const user = await User.findOne({ email });
     if (_.isEmpty(user)) {
       throw new ApiError(
@@ -103,7 +114,6 @@ const loginUser = async (req, res) => {
     }
 
     //check if password is valid
-
     const isPasswordValid = await user.isPasswordCorrect(password);
 
     if (!isPasswordValid) {
@@ -111,13 +121,11 @@ const loginUser = async (req, res) => {
     }
 
     //generate refreshToken and accessToken
-
     const { accessToken, refreshToken } = await generateRefreshAndAccessToken(
       user
     );
 
-    //send refreshTOken and accessToken as Cokies and json response
-
+    //send refreshTOken and accessToken as Cokies and a user in json response
     res
       .status(STATUS_CODES.OK)
       .cookie("accessToken", accessToken, options)
@@ -166,8 +174,10 @@ const logoutUser = async (req, res) => {
   }
 };
 
+//only admin can delete user
 const deleteUser = async (req, res) => {
   try {
+    //get id from params
     const id = req.params.id;
     if (id === "") {
       throw new ApiError(
@@ -176,11 +186,14 @@ const deleteUser = async (req, res) => {
         "user id  of the user to delete required"
       );
     }
-    const user = req.user;
-    const fetchedUser = await User.findById(user._id);
 
+    //get user from req
+    const user = req.user;
+
+    //check if the user available in the DB
     const checkIfUserAvailable = await User.findById(id);
 
+    //throw error if the user not present in DB
     if (_.isEmpty(checkIfUserAvailable)) {
       throw new ApiError(
         STATUS_CODES.BAD_REQUEST,
@@ -189,10 +202,13 @@ const deleteUser = async (req, res) => {
       );
     }
 
+    //delete user
     await User.deleteOne({ _id: id });
 
+    //check if user deleted from DB
     const isUserDeleted = await User.findById(id);
 
+    //if we get the response as an valid user object we should throw an error as the user is not deleted from the DB
     if (!_.isEmpty(isUserDeleted)) {
       throw new ApiError(
         STATUS_CODES.INTERNAL_SERVER_ERROR,
@@ -217,12 +233,13 @@ const deleteUser = async (req, res) => {
   }
 };
 
+//only admin can fetch all users
 const fetchAllUsers = async (req, res) => {
   try {
-    const user = req.user;
-
+    //find all users from the DB
     const allUsers = await User.find();
 
+    //send response to the client
     res.status(STATUS_CODES.OK).json(
       new ApiResponse(
         STATUS_CODES.OK,
@@ -239,10 +256,13 @@ const fetchAllUsers = async (req, res) => {
   }
 };
 
+//only admin can fetch any sepcific user with the id
 const fetchUser = async (req, res) => {
   try {
+    //get id from the params
     const id = req.params.id;
-    const user = req.user;
+
+    //validate if the id is not empty
     if (id?.trim() === "") {
       throw new ApiError(
         STATUS_CODES.BAD_REQUEST,
@@ -251,8 +271,10 @@ const fetchUser = async (req, res) => {
       );
     }
 
+    //fetch the user with the id
     const fetchedUser = await User.findById(id);
 
+    //if no user found then throw an error
     if (_.isEmpty(fetchedUser)) {
       throw new ApiError(
         STATUS_CODES.NOT_FOUND,
@@ -261,6 +283,7 @@ const fetchUser = async (req, res) => {
       );
     }
 
+    //send response
     res.status(STATUS_CODES.OK).json(
       new ApiResponse(STATUS_CODES.OK, {
         user: fetchedUser,
@@ -274,14 +297,51 @@ const fetchUser = async (req, res) => {
   }
 };
 
+//only the owner can update the user details
 const updateUser = async (req, res) => {
   try {
+    //get current user form req.user
     const user = req.user;
+
+    //create an array of allowed fields for sanitization and validation
     const allowedFields = ["name", "email", "password", "role"];
+
+    //get user payload data from req.body
     const userData = req.body;
+
+    //sanitize the data
     const sanitizedData = sanitizeInput(userData, allowedFields);
     const updateData = sanitizedData;
 
+    const { email, password } = updateData;
+
+    //validate email and password
+    const isEmailFormatValid = validateEmail(email);
+    const isPasswordFormatValid = validatePassword(password);
+
+    //check if the email or password as a key present in the req payload to verify that user is intended to edit either one
+    if (!isEmailFormatValid && Object.keys(updateData).includes("email")) {
+      throw new ApiError(
+        STATUS_CODES.BAD_REQUEST,
+        null,
+        `${email} is not a valid email format`
+      );
+    }
+    if (
+      !isPasswordFormatValid &&
+      Object.keys(updateData).includes("password")
+    ) {
+      throw new ApiError(
+        STATUS_CODES.BAD_REQUEST,
+        null,
+        `password must be atleast 6 characters long`
+      );
+    }
+
+    if (Object.keys(updateData).includes("password")) {
+      const hashedPassword = await bcrypt.hash(updateData.password, 10);
+      updateData.password = hashedPassword;
+    }
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
       {
@@ -292,6 +352,8 @@ const updateUser = async (req, res) => {
       }
     );
 
+    //if the response after updating the user is empty || null || undefined, it may be because the user data is not being updated
+
     if (_.isEmpty(updatedUser)) {
       throw new ApiError(
         STATUS_CODES.INTERNAL_SERVER_ERROR,
@@ -300,6 +362,7 @@ const updateUser = async (req, res) => {
       );
     }
 
+    //send response to the client
     res.status(STATUS_CODES.OK).json(
       new ApiResponse(
         STATUS_CODES.OK,

@@ -1,5 +1,5 @@
 import _ from "lodash";
-function sanitizeInput(data, allowedFields) {
+const sanitizeInput = (data, allowedFields) => {
   const picked = _.pick(data, allowedFields);
 
   const sanitized = {};
@@ -10,6 +10,6 @@ function sanitizeInput(data, allowedFields) {
   }
 
   return sanitized;
-}
+};
 
 export { sanitizeInput };
