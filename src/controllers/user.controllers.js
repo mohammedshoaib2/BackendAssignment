@@ -90,22 +90,11 @@ const loginUser = async (req, res) => {
       );
     }
     const { email, password } = sanitizedData;
-    if (
-      [email, password].some((field) => {
-        return field?.trim() === "";
-      })
-    ) {
-      throw new ApiError(
-        STATUS_CODES.BAD_REQUEST,
-        null,
-        "data recieved is not valid"
-      );
-    }
 
     //check user exist with the email
 
     const user = await User.findOne({ email });
-    if (!user) {
+    if (_.isEmpty(user)) {
       throw new ApiError(
         STATUS_CODES.BAD_REQUEST,
         null,
@@ -192,7 +181,7 @@ const deleteUser = async (req, res) => {
 
     const checkIfUserAvailable = await User.findById(id);
 
-    if (!checkIfUserAvailable) {
+    if (_.isEmpty(checkIfUserAvailable)) {
       throw new ApiError(
         STATUS_CODES.BAD_REQUEST,
         null,
@@ -204,7 +193,7 @@ const deleteUser = async (req, res) => {
 
     const isUserDeleted = await User.findById(id);
 
-    if (isUserDeleted) {
+    if (!_.isEmpty(isUserDeleted)) {
       throw new ApiError(
         STATUS_CODES.INTERNAL_SERVER_ERROR,
         null,
@@ -233,9 +222,6 @@ const fetchAllUsers = async (req, res) => {
     const user = req.user;
 
     const allUsers = await User.find();
-    if (!allUsers) {
-      throw new ApiError(STATUS_CODES.NOT_FOUND, null, "users not found");
-    }
 
     res.status(STATUS_CODES.OK).json(
       new ApiResponse(
@@ -264,15 +250,14 @@ const fetchUser = async (req, res) => {
         "id of the user is required to fetch"
       );
     }
-    //TODO: User can fetch its details by providing its own id but cannot fetch the user details with others users id but admin can
 
     const fetchedUser = await User.findById(id);
 
-    if (!fetchedUser) {
+    if (_.isEmpty(fetchedUser)) {
       throw new ApiError(
         STATUS_CODES.NOT_FOUND,
         null,
-        "user with email or id couldn't be found"
+        "user with the provided id couldn't be found"
       );
     }
 
@@ -307,7 +292,7 @@ const updateUser = async (req, res) => {
       }
     );
 
-    if (!updateData) {
+    if (_.isEmpty(updatedUser)) {
       throw new ApiError(
         STATUS_CODES.INTERNAL_SERVER_ERROR,
         null,
