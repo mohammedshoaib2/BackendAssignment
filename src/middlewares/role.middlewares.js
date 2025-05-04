@@ -3,8 +3,12 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 
 const auhtorizeRole = (allowedRoles) => {
   return (req, res, next) => {
+    //get the current user role from req.user which is injected by the middleware validateJWT
     const currentUserRole = req.user;
+
+    //check if the current user role is present or not
     if (allowedRoles.includes(currentUserRole.role)) {
+      //if the current user role is present then call the next middleware
       next();
     } else {
       return res

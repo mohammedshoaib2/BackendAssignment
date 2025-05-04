@@ -11,6 +11,7 @@ const validateJWT = async (req, res, next) => {
       req?.body?.accessToken ||
       req?.header("Authorization")?.replace("Bearer ", "")?.trim();
 
+    //check if the accessToken is present or not
     if (!accessToken) {
       throw new ApiError(
         STATUS_CODES.UNAUTHORIZED,
@@ -24,6 +25,8 @@ const validateJWT = async (req, res, next) => {
     //fetch the user with decoded _id
     const user = await User.findById(decodedAccessToken._id);
 
+    //check if the user is present or not
+    //if user is not present then throw an error
     if (!user) {
       throw new ApiError(
         STATUS_CODES.UNAUTHORIZED,

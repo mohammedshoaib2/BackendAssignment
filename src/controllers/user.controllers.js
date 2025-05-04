@@ -285,10 +285,13 @@ const fetchUser = async (req, res) => {
 
     //send response
     res.status(STATUS_CODES.OK).json(
-      new ApiResponse(STATUS_CODES.OK, {
-        user: fetchedUser,
-      }),
-      "user fetched successfully"
+      new ApiResponse(
+        STATUS_CODES.OK,
+        {
+          user: fetchedUser,
+        },
+        "user fetched successfully"
+      )
     );
   } catch (error) {
     res
