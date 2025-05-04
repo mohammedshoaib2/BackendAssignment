@@ -27,7 +27,6 @@ const validateInput = (data, requiredFields) => {
 const validateEmailPassword = (email, password) => {
   const isEmailFormatValid = validateEmail(email);
   const isPasswordFormatValid = validatePassword(password);
-  console.log(isEmailFormatValid, isPasswordFormatValid);
 
   if (!isEmailFormatValid) {
     throw new ApiError(
